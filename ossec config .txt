@@ -1,0 +1,163 @@
+#!/bin/bash
+
+
+
+# Disable root login over SSH
+sudo sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+
+# Disable password authentication and enable key-based authentication
+sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+
+
+
+// Install and configure an Intrusion Detection System (IDS)
+
+
+//install suricata 
+ apt-get update
+ apt-get install libpcre3-dbg libpcre3-dev autoconf automake libtool li
+ apt-get install libnetfilter-queue-dev libnetfilter-queue1 libnfnetlink-dev
+
+ wget http://www.openinfosecfoundation.org/download/suricata-3.1.1.tar.gz
+ tar -zxf suricata-3.1.1.tar.gz
+ cd suricata-3.1.1/
+ ./configure --enable-nfqueue --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+sudo nano /etc/intrusion-detection-system.conf
+
+
+make install-rules
+ls /etc/suricata/rules
+vim /etc/suricata/suricata.yaml
+
+//using suricata to perform IDS 
+
+ethtool -K eth0 gro off lro off
+ /usr/bin/suricata --list-runmodes
+
+ /usr/bin/suricata -c /etc/suricata/suricata.yaml -i ens160 --init-errors-fatal
+
+# Install and configure a Network Intrusion Detection System (NID)
+sudo apt-get install nids
+sudo nano /etc/nids.conf
+
+# Install and configure an Endpoint Detection and Response (EDR) system
+sudo apt-get install edr
+sudo nano /etc/edr.conf
+
+
+OSSEC INSTALLATION WITH FIREWALL IN LINUX 
+
+
+apt-get update -y
+
+#getting started 
+apt-get install build-essential gcc make apache2 libapache2-mod-php7.0 php7.0 php7.0-cli php7.0-common apache2-utils unzip wget sendmail-bin sendmail inotify-tools -y
+
+#install ossec
+wget https://github.com/ossec/ossec-hids/archive/2.9.0.tar.gz
+tar -xvzf 3.1.0.tar.gz
+
+//change the directory to the extracted directory, then run install.sh to install oSSEC
+
+cd ossec-hids-3.1.0
+sh install.sh
+
+Change the language to english 
+
+
+//ONCE THE INSTALLATION IS COMPLETED:
+
+/var/ossec/bin/ossec-control start
+
+# Configure OSSEC
+sudo nano /var/ossec/etc/ossec.conf
+
+replace with these lines:
+
+<syscheck> 
+    <!-- Frequency that syscheck is executed - default to every 60 seconds --> 
+    <frequency>60</frequency> 
+    <alert_new_files>yes</alert_new_files>
+
+//Create an alert 
+<directories report_changes="yes" realtime="yes" check_all="yes">/etc,/usr/bin,/usr/sbin</directories> 
+<directories report_changes="yes" realtime="yes" check_all="yes">/var/www,/bin,/sbin</directories>
+
+//edit the rules file local_rules.xml
+
+nano /var/ossec/rules/local_rules.xml
+
+
+
+//add the following rules 
+<rule id="554" level="7" overwrite="yes"> 
+    <category>ossec</category> 
+    <decoded_as>syscheck_new_entry</decoded_as> 
+    <description>File added to the system.</description> 
+    <group>syscheck,</group> 
+</rule>
+
+//restart it
+/var/ossec/bin/ossec-control restart
+
+
+//test OSSEC
+nano /etc/rc.local
+
+add
+#sh test.sh
+
+mail
+
+// Configure firewall rules to allow OSSEC to communicate
+sudo nano /etc/ufw/before.rules
+
+
+# Install and configure a firewall
+sudo apt-get install ufw
+sudo ufw enable
+
+$ sudo ufw status
+
+#set up a ufw default policy 
+$ grep 'DEFAULT_' /etc/default/ufw
+
+$ sudo ufw default allow outgoing
+$ sudo ufw default deny incoming
+
+
+#firewall rule to allow connection to ssh 
+$ sudo ufw allow ssh
+
+$ sudo ufw allow 2020/tcp
+$ sudo ufw allow proto tcp from any to 10.8.0.1 port 22
+$ sudo ufw allow proto tcp from 10.8.0.2 to 10.8.0.1 port 22
+$ sudo ufw allow proto tcp from any to 10.8.0.1 port 22 'SSHD port 22 for private lan'
+
+#disable 
+$ sudo ufw disable
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
