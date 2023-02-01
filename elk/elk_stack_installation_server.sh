@@ -1,21 +1,22 @@
-# Java 8 installation
-
+# Java installation
+// doesnt work may remove
 sudo add-apt-repository -y ppa:webupd8team/java
 sudo apt-get update
 sudo apt-get -y install oracle-java8-installer
+//doesnt work below does
+sudo apt install openjdk-11-jre-headless
 
 # ElasticSearch Installation
-echo -n "importing elasticsearch public GPG key into apt"
+echo "importing elasticsearch public GPG key into apt"
 wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
 
-echo -n "creating elasticsearch source list"
+echo "creating elasticsearch source list"
 echo "deb http://packages.elastic.co/elasticsearch/2.x/debian stable main" | sudo tee -a /etc/apt/sources.list.d/elasticsearch-2.x.list
 
 sudo apt-get update
 sudo apt-get -y install elasticsearch
-sudo vi /etc/elasticsearch/elasticsearch.yml
-
-// TODO Prevent access using editing network.host: localhost
+sudo apt-get -y install elasticsearch --allow-unauthenticated
+echo "network.host: localhost" >> /etc/elasticsearch/elasticsearch.yml
 
 # Restarting Elasticseatch
 sudo service elasticsearch restart
@@ -23,64 +24,33 @@ sudo service elasticsearch restart
 # Start Elastic on bootup
 sudo update-rc.d elasticsearch defaults 95 10
 
-
 # Kibana Installation
-echo -n "Kibanan Installation"
+echo "Kibanan Installation"
 
 echo "deb http://packages.elastic.co/kibana/4.5/debian stable main" | sudo tee -a /etc/apt/sources.list.d/kibana-4.5.x.list
 
 sudo apt-get update
 
-sudo apt-get -y install kibana
+sudo apt-get install kibana --allow-unauthenticated
 
-
-// Need manual stuff
-sudo vi /opt/kibana/config/kibana.yml
-
-In the Kibana configuration file, find the line that specifies server.host, and replace the IP address (“0.0.0.0” by default) with “localhost”:
-server.host: "localhost"
-// Need manual stuff
+echo server.host: "localhost" >> /etc/kibana/kibana.yml 
 
 sudo update-rc.d kibana defaults 96 9
 sudo service kibana start
 
 
 # Nginx Installation
-echo -n "Kibanan Nginx"
+echo "Nginx installation"
 
 sudo apt-get install nginx apache2-utils
 sudo htpasswd -c /etc/nginx/htpasswd.users kibanaadmin
 
-// Need manual stuff here
-
-sudo vi /etc/nginx/sites-available/default
-
-// Need to add the following 
-
-server {
-    listen 80;
-
-    server_name example.com;
-
-    auth_basic "Restricted Access";
-    auth_basic_user_file /etc/nginx/htpasswd.users;
-
-    location / {
-        proxy_pass http://localhost:5601;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;        
-    }
-}
-
-//
+printf "server {\n    listen 80;\n    server_name example.com;\n    auth_basic \"Restricted Access\";\n    auth_basic_user_file /etc/nginx/htpasswd.users;\n    location \ {\n        proxy_pass http://localhost:5601;\n        proxy_http_version 1.1;\n        proxy_set_header Upgrade \$http_upgrade;\n        proxy_set_header Connection 'upgrade';\n        proxy_set_header Host \$host;\n        proxy_cache_bypass \$http_upgrade;\n    }\n}" > /etc/nginx/sites-available/default 
 
 sudo service nginx restart
 
 
-Kibana is now accessible via your FQDN or the public IP address of your ELK Server i.e. http://elk-server-public-ip/
+echo "Kibana is now accessible via your FQDN or the public IP address of your ELK Server i.e. http://elk-server-public-ip/"
 
 
 
@@ -96,12 +66,10 @@ sudo apt-get install logstash
 sudo mkdir -p /etc/pki/tls/certs
 sudo mkdir /etc/pki/tls/private
 
-sudo vi /etc/ssl/openssl.cnf
+ip="ip a | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'"
+ip=$(eval "$ip")
 
-// Manual Work
-
-subjectAltName = IP: ELK_server_private_IP
-
+sed -i -e "s/^\[ v3\_ca \]$/\[ v3\_ca \]\nsubjectAltName = IP\: $ip/g" /etc/ssl/openssl.cnf
 
 # Generate SSL Certificates
 cd /etc/pki/tls
