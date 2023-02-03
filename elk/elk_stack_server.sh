@@ -2,6 +2,7 @@
 sudo apt update
 sudo apt install -y nginx
 
+# allow NGINX in case firewall denies traffic
 sudo ufw allow 'Nginx HTTP'
 
 sudo systemctl start nginx
@@ -13,13 +14,20 @@ sudo chown -R $USER:$USER /var/www/soc-dashboard.com/html
 
 sudo chmod -R 755 /var/www/soc-dashboard.com
 
+# creates soc-dashboard.com and acts as proxy between kibana and the internet. Listening on port 5601, Kibana's default port
 printf "server {\r\n    listen 80;\r\n\r\n    server_name soc-dashboard.com www.soc-dashboard.com;\r\n\r\n    auth_basic \"Restricted Access\";\r\n    auth_basic_user_file /etc/nginx/htpasswd.users;\r\n\r\n    location / {\r\n        proxy_pass http://localhost:5601;\r\n        proxy_http_version 1.1;\r\n        proxy_set_header Upgrade \$http_upgrade;\r\n        proxy_set_header Connection 'upgrade';\r\n        proxy_set_header Host \$host;\r\n        proxy_cache_bypass \$http_upgrade;\r\n    }\r\n}\r\n" > /etc/nginx/sites-available/soc-dashboard.com
 
 sudo ln -s /etc/nginx/sites-available/soc-dashboard.com /etc/nginx/sites-enabled/
 
+# adding the local ip to /etc/hosts so that the dashbaord is accessible on soc-dashboard.com 
+sudo bash -c 'echo -e "`hostname -I`\tsoc-dashboard.com" >> /etc/hosts'
+
+# configuring NGINX config file
 sudo bash -c 'printf "user www-data;\r\nworker_processes auto;\r\npid /run/nginx.pid;\r\ninclude /etc/nginx/modules-enabled/*.conf;\r\nevents {\r\n\tworker_connections 768;\r\n}\r\nhttp {\r\n\tsendfile on;\r\n\ttcp_nopush on;\r\n\ttypes_hash_max_size 2048;\r\n\tserver_names_hash_bucket_size 64;\r\n\tinclude /etc/nginx/mime.types;\r\n\tdefault_type application/octet-stream;\r\n\tssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3; \r\n\tssl_prefer_server_ciphers on;\r\n\taccess_log /var/log/nginx/access.log;\r\n\terror_log /var/log/nginx/error.log;\r\n\tgzip on;\r\n\tinclude /etc/nginx/conf.d/*.conf;\r\n\tinclude /etc/nginx/sites-enabled/*;\r\n}" > /etc/nginx/nginx.conf'
 
+# installing curl
 sudo apt install -y curl
+
 # Restarting NGINX for dashboard to load
 sudo systemctl restart nginx
 
@@ -47,7 +55,8 @@ sudo systemctl start kibana
 # echo "enter kibanadmin password"
 # echo "kibanaadmin:`openssl passwd -apr1`" | sudo tee -a /etc/nginx/htpasswd.users
 
-# use above commented lines to enter password manually, bellow inserts the user kibanaadmin with password azerty
+# use above commented lines to enter password manually, 
+#bellow inserts the user kibanaadmin with password azerty
 printf "kibanaadmin:\$apr1\$ldZ2at99\$qAkvvyLqOMH1MS4g6ryKy." > /etc/nginx/htpasswd.users
 
 # Installing Logstash
